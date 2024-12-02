@@ -11,10 +11,10 @@ with open(logfile_path, 'r') as f:
         if not line:
             continue
         parts = line.split(';')
-        if len(parts) < 2:
+        if len(parts) < 3:
             continue  # Skip lines that don't have enough parts
-        timestamp = parts[0]
-        title = parts[1]
+        timestamp, idleTime = parts[0], parts[1]
+        title = parts[2]
         data.append({'timestamp': timestamp, 'title': title})
 
 # Aggregate data
