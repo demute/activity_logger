@@ -1,0 +1,17 @@
+*~
+*.o
+*.elf
+*.hex
+*.bin
+*.size
+*.log
+.*.sw[ponm]
+.sw[ponm]
+*.vim
+*.srec
+*.dylib
+*.so
+.DS_Store
+*-backups
+/activity.log
+/activity_report.html
