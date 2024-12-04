@@ -14,6 +14,8 @@ with open(logfile_path, 'r') as f:
         if len(parts) < 3:
             continue  # Skip lines that don't have enough parts
         timestamp, idleTime = parts[0], parts[1]
+        if int (float (idleTime)) > 120:
+            continue
         title = parts[2]
         data.append({'timestamp': timestamp, 'title': title})
 
@@ -120,7 +122,7 @@ html_content += '''
 with open(logfile_path, 'r') as f:
     logfile_lines = f.readlines()
     reversed_lines = logfile_lines[::-1]  # Reverse the list of lines
-    logfile_content = ''.join(reversed_lines)
+    logfile_content = ''.join(reversed_lines[1:1000])
     html_content += logfile_content
 
 html_content += '''
