@@ -28,6 +28,8 @@ cat << EOF > "$HTTP_PLIST_FILE"
     <string>-m</string>
     <string>http.server</string>
     <string>8000</string>
+    <string>--bind</string>
+    <string>127.0.0.1</string>
   </array>
   <key>RunAtLoad</key>
   <true/>
