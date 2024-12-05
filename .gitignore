@@ -13,5 +13,4 @@
 *.so
 .DS_Store
 *-backups
-/activity.log
-/activity_report.html
+/activity_log.jsonl
