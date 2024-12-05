@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Activity Report</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        .bar-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .bar-label {
+            width: 200px;
+            text-align: left;
+            margin-right: 10px;
+            word-wrap: break-word;
+        }
+        .bar {
+            height: 20px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        .time-label {
+            margin-left: 10px;
+            min-width: 80px;
+            text-align: right;
+        }
+        h2 {
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 8px;
+            text-align: left;
+        }
+        a {
+            color: #99ccff;
+        }
+        .bar-percentage {
+            min-width: 50px;
+            text-align: right;
+            margin-left: 10px;
+            color: #aaa;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        label {
+            margin-right: 10px;
+        }
+        select {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Activity Report</h2>
+    <div class="controls">
+        <label for="time-frame">Time Frame:</label>
+        <select id="time-frame" onchange="generateReport()">
+            <optgroup label="Hours">
+                <option value="1h">Last 1 hour</option>
+                <option value="2h">Last 2 hours</option>
+                <option value="4h">Last 4 hours</option>
+                <option value="8h">Last 8 hours</option>
+                <option value="16h">Last 16 hours</option>
+            </optgroup>
+            <optgroup label="Days">
+                <option value="1d" selected="selected">Last 1 day</option>
+                <option value="2d">Last 2 days</option>
+                <option value="3d">Last 3 days</option>
+                <option value="4d">Last 4 days</option>
+                <option value="5d">Last 5 days</option>
+                <option value="6d">Last 6 days</option>
+            </optgroup>
+            <optgroup label="Weeks">
+                <option value="1w">Last 1 week</option>
+                <option value="2w">Last 2 weeks</option>
+                <option value="3w">Last 3 weeks</option>
+                <option value="4w">Last 4 weeks</option>
+            </optgroup>
+            <optgroup label="Months">
+                <option value="1m">Last 1 month</option>
+                <option value="2m">Last 2 months</option>
+                <option value="3m">Last 3 months</option>
+                <option value="4m">Last 4 months</option>
+                <option value="5m">Last 5 months</option>
+                <option value="6m">Last 6 months</option>
+                <option value="7m">Last 7 months</option>
+                <option value="8m">Last 8 months</option>
+                <option value="9m">Last 9 months</option>
+                <option value="10m">Last 10 months</option>
+                <option value="11m">Last 11 months</option>
+            </optgroup>
+            <optgroup label="Year">
+                <option value="1y">Last 1 year</option>
+            </optgroup>
+            <optgroup label="All Time">
+                <option value="all">Since Beginning</option>
+            </optgroup>
+        </select>
+    </div>
+    <div id="report-container"></div>
+    <h2>Raw Logfile</h2>
+    <table id="raw-log">
+        <tr>
+            <th>Time</th>
+            <th>Title</th>
+            <th>URL/Page</th>
+            <th>Idle Time (s)</th>
+        </tr>
+    </table>
+
+    <script>
+        let activityData = [];
+
+        // Function to read the JSONL file
+        async function loadActivityData() {
+            try {
+                const response = await fetch('activity_log.jsonl');
+                const textData = await response.text();
+                const lines = textData.trim().split('\n');
+                activityData = lines.map(line => JSON.parse(line));
+                populateRawLog(activityData);
+                generateReport();
+            } catch (error) {
+                console.error('Error loading activity data:', error);
+            }
+        }
+
+        // Function to populate the raw log section
+        function populateRawLog(data) {
+            const rawLogElement = document.getElementById('raw-log');
+            data.slice(-1000).reverse().forEach(entry => {
+                const row = rawLogElement.insertRow(-1);
+                const timeCell = row.insertCell(0);
+                const titleCell = row.insertCell(1);
+                const urlCell = row.insertCell(2);
+                const idleCell = row.insertCell(3);
+
+                // Format the timestamp
+                const date = new Date(entry.timestamp * 1000);
+                timeCell.textContent = date.toISOString().slice(0, 19).replace('T', ' ');
+
+                // Set the title
+                titleCell.textContent = entry.title;
+
+                // Create a link if URL is not null
+                if (entry.url) {
+                    const link = document.createElement('a');
+                    link.href = entry.url;
+                    link.textContent = entry.pageTitle || entry.url;
+                    urlCell.appendChild(link);
+                } else {
+                    urlCell.textContent = '-';
+                }
+
+                // Set the idle time
+                idleCell.textContent = entry.idleTime;
+            });
+        }
+
+        // Function to generate the report
+        function generateReport() {
+            const reportContainer = document.getElementById('report-container');
+            reportContainer.innerHTML = '';
+
+            // Get the selected time frame
+            const timeFrameSelect = document.getElementById('time-frame');
+            const timeFrameValue = timeFrameSelect.value;
+
+            // Calculate the start time based on the selected time frame
+            let startTime = null; // default is null for 'since beginning'
+            if (timeFrameValue !== 'all') {
+                const now = Date.now();
+                const timeValue = parseInt(timeFrameValue.slice(0, -1));
+                const timeUnit = timeFrameValue.slice(-1);
+                let millisecondsAgo = 0;
+
+                switch (timeUnit) {
+                    case 'h': // hours
+                        millisecondsAgo = timeValue * 60 * 60 * 1000;
+                        break;
+                    case 'd': // days
+                        millisecondsAgo = timeValue * 24 * 60 * 60 * 1000;
+                        break;
+                    case 'w': // weeks
+                        millisecondsAgo = timeValue * 7 * 24 * 60 * 60 * 1000;
+                        break;
+                    case 'm': // months (approximate)
+                        millisecondsAgo = timeValue * 30 * 24 * 60 * 60 * 1000;
+                        break;
+                    case 'y': // years (approximate)
+                        millisecondsAgo = timeValue * 365 * 24 * 60 * 60 * 1000;
+                        break;
+                    default:
+                        millisecondsAgo = 0;
+                }
+
+                startTime = now - millisecondsAgo;
+            }
+
+            // Filter the data based on the time frame and idleTime
+            const filteredData = activityData.filter(entry => {
+                const idleTime = parseFloat(entry.idleTime);
+                if (idleTime > 120) {
+                    return false;
+                }
+
+                // Parse the timestamp (assuming it's in Unix time seconds)
+                const entryTimestamp = entry.timestamp * 1000; // Convert to milliseconds
+                const entryDate = new Date(entryTimestamp);
+
+                if (startTime !== null && entryDate.getTime() < startTime) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            // Aggregate data
+            const titleCounts = {};
+            filteredData.forEach(entry => {
+                const title = entry.title || 'UNKNOWN';
+                titleCounts[title] = (titleCounts[title] || 0) + 1;
+            });
+
+            // Find the maximum count for scaling
+            const counts = Object.values(titleCounts);
+            const maxCount = Math.max(...counts);
+            const totalEntries = counts.reduce((a, b) => a + b, 0);
+
+            // Generate bars
+            Object.entries(titleCounts)
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([title, count]) => {
+                    const widthPercent = (count / maxCount) * 70; // 70% of container width
+                    const color = 'orange'; // Default color
+                    const totalMinutes = count;
+                    const hours = Math.floor(totalMinutes / 60);
+                    const minutes = totalMinutes % 60;
+                    let timeStr = '';
+                    if (hours > 0 && minutes > 0) {
+                        timeStr = `${hours}h ${minutes}m`;
+                    } else if (hours > 0) {
+                        timeStr = `${hours} hours`;
+                    } else {
+                        timeStr = `${minutes} minutes`;
+                    }
+                    const percentage = (count / totalEntries) * 100;
+                    const percentageStr = `${percentage.toFixed(1)}%`;
+
+                    // Create bar elements
+                    const barContainer = document.createElement('div');
+                    barContainer.className = 'bar-container';
+
+                    const barLabel = document.createElement('div');
+                    barLabel.className = 'bar-label';
+                    barLabel.textContent = title;
+
+                    const bar = document.createElement('div');
+                    bar.className = 'bar';
+                    bar.style.backgroundColor = color;
+                    bar.style.width = `${widthPercent}%`;
+
+                    const timeLabel = document.createElement('div');
+                    timeLabel.className = 'time-label';
+                    timeLabel.textContent = timeStr;
+
+                    const barPercentage = document.createElement('div');
+                    barPercentage.className = 'bar-percentage';
+                    barPercentage.textContent = percentageStr;
+
+                    barContainer.appendChild(barLabel);
+                    barContainer.appendChild(bar);
+                    barContainer.appendChild(timeLabel);
+                    barContainer.appendChild(barPercentage);
+
+                    reportContainer.appendChild(barContainer);
+                });
+        }
+
+        // Initialize the page
+        window.onload = () => {
+            loadActivityData();
+        };
+    </script>
+</body>
+</html>
+

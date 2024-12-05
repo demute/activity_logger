@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import Quartz
 import time
-from datetime import datetime
 import subprocess
 import re
 
 def get_idle_time():
-    return Quartz.CGEventSourceSecondsSinceLastEventType(Quartz.kCGEventSourceStateHIDSystemState, Quartz.kCGAnyInputEventType)
+    cmd = """/usr/sbin/ioreg -c IOHIDSystem | awk '/HIDIdleTime/ { print int($NF/1000000000); exit }'"""
+    result = subprocess.check_output(cmd, shell=True, text=True).strip()
+    return result
 
 def toggle_mission_control():
     cmd = """osascript -e 'tell application "System Events" to key code 160'"""
@@ -32,7 +32,7 @@ def get_title_of_active_google_chrome_tab():
     return result
 
 def main():
-    tsp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    timestamp = int (time.time ())
     activeApp = get_name_of_active_window()
     idleTime = int (get_idle_time())
 
@@ -43,9 +43,9 @@ def main():
         match = re.match(r'https?://([^/]+)', url)
         if match:
             domain = match.group(1)
-        print(f"{tsp};{idleTime};{domain};{url};{title}")
+        print(f'{{"timestamp": {timestamp}, "idleTime": {idleTime}, "title": "{domain}", "url": "{url}", "pageTitle": "{title}"}}')
     else:
-        print(f"{tsp};{idleTime};{activeApp}")
+        print(f'{{"timestamp": {timestamp}, "idleTime": {idleTime}, "title": "{activeApp}", "url": null, "pageTitle": null}}')
 
 if __name__ == '__main__':
     main()

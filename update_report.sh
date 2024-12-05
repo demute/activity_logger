@@ -3,5 +3,4 @@
 SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
 cd "${SCRIPT_DIR}"
 
-/usr/bin/python3 update_activity.py >> activity.log
-/usr/bin/python3 generate_report.py
+python3 update_activity.py >> activity_log.jsonl
