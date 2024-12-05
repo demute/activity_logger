@@ -80,3 +80,4 @@ launchctl load -w "$UPDATE_PLIST_FILE"
 echo "Update report setup completed. The script will run once every minute."
 
 echo "Your OS will probably ask you about some permissions and in order for this to work you have to grant them."
+echo "if everything works, you should be able to go to http://127.0.0.1:8000 and statistics over your computer usage will show."
