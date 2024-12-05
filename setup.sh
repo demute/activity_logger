@@ -14,6 +14,8 @@ mkdir -p "$PLIST_DIR"
 # Get the current directory to use as the WorkingDirectory
 WORKING_DIR=$(pwd)
 
+PYTHON3=$(which python3)
+
 # Create the HTTP server plist content
 cat << EOF > "$HTTP_PLIST_FILE"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -24,7 +26,7 @@ cat << EOF > "$HTTP_PLIST_FILE"
   <string>com.user.httpserver</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/local/bin/python3</string>
+    <string>$PYTHON3</string>
     <string>-m</string>
     <string>http.server</string>
     <string>8000</string>
