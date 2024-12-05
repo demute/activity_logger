@@ -64,6 +64,10 @@
             border: 1px solid #555;
             padding: 5px;
         }
+        .total-time {
+            font-size: medium;
+            color: #ddd;
+        }
     </style>
 </head>
 <body>
@@ -112,6 +116,8 @@
                 <option value="all">Since Beginning</option>
             </optgroup>
         </select>
+        <span class="total-time" id="total-time"></span>
+
     </div>
     <div id="report-container"></div>
     <h2>Raw Logfile</h2>
@@ -176,7 +182,10 @@
         // Function to generate the report
         function generateReport() {
             const reportContainer = document.getElementById('report-container');
+            const totalTimeElement = document.getElementById('total-time');
+
             reportContainer.innerHTML = '';
+            totalTimeElement.textContent = '';
 
             // Get the selected time frame
             const timeFrameSelect = document.getElementById('time-frame');
@@ -230,6 +239,19 @@
 
                 return true;
             });
+
+            // Calculate total active time
+            let totalMinutes = filteredData.length;
+
+            // Convert total seconds to hours and minutes
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+
+            let totalTimeString = '';
+            if (hours > 0) totalTimeString += `${hours}h `;
+            totalTimeString += `${minutes}m`;
+
+            totalTimeElement.textContent = totalTimeString;
 
             // Aggregate data
             const titleCounts = {};
