@@ -139,7 +139,15 @@
                 const response = await fetch('activity_log.jsonl');
                 const textData = await response.text();
                 const lines = textData.trim().split('\n');
-                activityData = lines.map(line => JSON.parse(line));
+
+                activityData = lines.map(line => {
+                    try {
+                        return JSON.parse(line);
+                    } catch (error) {
+                        return null; // or use undefined, depending on your needs
+                    }
+                }).filter(item => item !== null); // This removes the null entries
+
                 populateRawLog(activityData);
                 generateReport();
             } catch (error) {
