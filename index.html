@@ -26,19 +26,28 @@ details summary,
 
 /* summary (5 columns: arrow, title, bar, time, % ) */
 details summary {
-  cursor: pointer;
   grid-template-columns:
     auto    /* ▶/▾ */
     200px   /* title */
     1fr     /* main bar */
+    auto    /* cost */
     auto    /* time label */
     auto;   /* percentage */
 }
 
-details summary div.bar-label      { grid-column: 2; }
-details summary div.bar            { grid-column: 3; }
-details summary div.time-label     { grid-column: 4; }
-details summary div.bar-percentage { grid-column: 5; }
+details summary .bar-label       { grid-column: 2; }
+details summary .bar             { grid-column: 3; }
+details summary .cost-label      { grid-column: 4; }
+details summary .time-label      { grid-column: 5; }
+details summary .bar-percentage  { grid-column: 6; }
+
+details summary .cost-label {
+  grid-column: 4;
+  min-width: 60px;
+  text-align: right;
+  color: #fd1;
+  padding-right: 10px;
+}
 
 details summary::-webkit-details-marker {
   display: none;
@@ -83,18 +92,27 @@ details:not([open]) summary::before {
   color: #aaa;
 }
 
-/* sub-rows (4 columns: bar track, title, time, % ) */
 .bar-container {
   display: grid;
   grid-template-columns:
     auto    /* checkbox */
     200px   /* grey track */
     1fr     /* pageTitle */
+    auto    /* cost */
     auto    /* time label */
     auto;   /* percentage */
   grid-column-gap: 10px;
   align-items: center;
   margin-bottom: 10px;
+}
+
+/* cost on sub-rows */
+.bar-container .cost-label {
+  grid-column: 4;
+  min-width: 60px;
+  text-align: right;
+  color: #0f0;
+  padding-right: 10px;
 }
 
 /* grey track + orange fill via pseudo */
@@ -124,8 +142,9 @@ details:not([open]) summary::before {
 
 .bar-container .sub-bar      { grid-column: 2; }
 .bar-container .sub-title    { grid-column: 3; }
-.bar-container .time-label   { grid-column: 4; }
-.bar-container .bar-percentage { grid-column: 5; }
+.bar-container .cost-label   { grid-column: 4; }
+.bar-container .time-label   { grid-column: 5; }
+.bar-container .bar-percentage { grid-column: 6; }
 
 
     </style>
@@ -184,6 +203,9 @@ details:not([open]) summary::before {
         <tr><th>Time</th><th>Title</th><th>URL/Page</th><th>Idle Time (s)</th></tr>
     </table>
     <script>
+        const costPerMinute = {
+            "www.youtube.com": 0.1,
+        };
         let activityData = [];
         async function loadActivityData() {
             const res = await fetch('activity_log.jsonl');
@@ -241,18 +263,24 @@ details:not([open]) summary::before {
             Object.entries(counts).sort((a,b)=>b[1]-a[1])
             .forEach(([title,count])=>{
                 const h=Math.floor(count/60), m=count%60;
+                const minutes = count;
+                const factor = costPerMinute[title] || 0;
+                const cost = (minutes * factor).toFixed(2);
+
                 const timeStr=h?(m?`${h}h ${m}m`:`${h}h`):`${m}m`;
                 const pct=((count/totalEntries)*70).toFixed(1)+'%';
                 const wp=(count/maxCount)*70+'%';
                 const d=document.createElement('details');
                 const s=document.createElement('summary');
-                ['bar-label','bar','time-label','bar-percentage'].forEach(cls=>{
-                    const div=document.createElement('div');
-                    div.className=cls;
-                    if(cls==='bar-label') div.textContent=title;
-                    if(cls==='bar') { div.style.width=wp; }
-                    if(cls==='time-label') div.textContent=timeStr;
-                    if(cls==='bar-percentage') div.textContent=pct;
+                // build summary divs:
+                ['bar-label','bar','cost-label','time-label','bar-percentage'].forEach(cls=>{
+                    const div = document.createElement('div');
+                    div.className = cls;
+                    if (cls==='bar-label')      div.textContent = title;
+                    if (cls==='bar')            div.style.width = wp;
+                    if (cls==='cost-label')     div.textContent = (+cost > 0 ? `$${cost}` : '');
+                    if (cls==='time-label')     div.textContent = timeStr;
+                    if (cls==='bar-percentage') div.textContent = pct;
                     s.appendChild(div);
                 });
                 d.appendChild(s);
@@ -269,6 +297,8 @@ details:not([open]) summary::before {
                 const summaryBar = s.querySelector('.bar');
                 const summaryTimeLabel = s.querySelector('.time-label');
                 const summaryPercentageLabel = s.querySelector('.bar-percentage');
+                const summaryCostLabel       = s.querySelector('.cost-label');
+
 
                 // 2) map of pageTitle→checkbox
                 const checkboxMap = {};
@@ -287,6 +317,9 @@ details:not([open]) summary::before {
                     // percentage label (relative to totalEntries)
                     summaryPercentageLabel.textContent =
                         ((newCount / totalEntries) * 70).toFixed(1) + '%';
+                    const newCost = (newCount * factor).toFixed(2);
+                    summaryCostLabel.textContent = (+newCost > 0 ? `$${newCost}` : '');
+
                 }
 
                 // 4) build each sub-row with a checkbox
@@ -309,6 +342,8 @@ details:not([open]) summary::before {
                         sb.style.setProperty('--fill-width', ((c/maxPageCount)*100).toFixed(1) + '%');
                         row.appendChild(sb);
 
+                        const subCost = (c * factor).toFixed(2);
+
                         // title link
                         const st = document.createElement('div');
                         st.className = 'sub-title';
@@ -318,6 +353,20 @@ details:not([open]) summary::before {
                         a.target = '_blank';
                         st.appendChild(a);
                         row.appendChild(st);
+
+                        const sc = document.createElement('div');
+                        sc.className = 'cost-label';
+                        sc.textContent = (+subCost > 0 ? `$${subCost}` : '');
+
+                        row.appendChild(sc);
+
+                        // update both summary & this sub-cost on toggle
+                        cb.addEventListener('change', () => {
+                          updateSummary();
+                            sc.textContent = cb.checked
+                                ? (c * factor > 0 ? `$${(c * factor).toFixed(2)}` : '')
+                                : '';
+                        });
 
                         // time label
                         const tl = document.createElement('div');
