@@ -38,13 +38,17 @@ details summary,
 
 /* summary (5 columns: arrow, title, bar, time, % ) */
 details summary {
-  grid-template-columns:
-    auto    /* ▶/▾ */
+    grid-template-columns:
+        auto    /* ▶/▾ */
     200px   /* title */
     1fr     /* main bar */
     auto    /* cost */
     auto    /* time label */
     auto;   /* percentage */
+border: 0px solid #444;
+padding: 0px;
+border-radius: 3px;
+background-color: #151515;
 }
 
 details summary .bar-label       { grid-column: 2; }
@@ -224,6 +228,8 @@ details:not([open]) summary::before {
     <script>
         const costPerMinute = {
             "www.youtube.com": 0.1,
+            "java": 0.2,
+            "RobloxPlayer": 0.25,
         };
         let activityData = [];
         async function loadActivityData() {
