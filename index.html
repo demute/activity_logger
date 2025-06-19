@@ -4,70 +4,123 @@
     <meta charset="UTF-8">
     <title>Activity Report</title>
     <style>
-        body {
-            background-color: black;
-            color: white;
-            font-family: Arial, sans-serif;
-        }
-        .bar-container {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .bar-label {
-            width: 200px;
-            text-align: left;
-            margin-right: 10px;
-            word-wrap: break-word;
-        }
-        .bar {
-            height: 20px;
-            margin-right: 10px;
-            flex-shrink: 0;
-        }
-        .time-label {
-            margin-left: 10px;
-            min-width: 80px;
-            text-align: right;
-        }
-        h2 {
-            border-bottom: 1px solid #444;
-            padding-bottom: 5px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid #444;
-            padding: 8px;
-            text-align: left;
-        }
-        a {
-            color: #99ccff;
-        }
-        .bar-percentage {
-            min-width: 50px;
-            text-align: right;
-            margin-left: 10px;
-            color: #aaa;
-        }
-        .controls {
-            margin-bottom: 20px;
-        }
-        label {
-            margin-right: 10px;
-        }
-        select {
-            background-color: #333;
-            color: white;
-            border: 1px solid #555;
-            padding: 5px;
-        }
-        .total-time {
-            font-size: medium;
-            color: #ddd;
-        }
+
+body {
+  background-color: black;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+.controls {
+  margin-bottom: 20px;
+}
+
+/* main summary and sub-rows share a grid gutter */
+details summary,
+.bar-container {
+  display: grid;
+  grid-column-gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* summary (5 columns: arrow, title, bar, time, % ) */
+details summary {
+  cursor: pointer;
+  grid-template-columns:
+    auto    /* ▶/▾ */
+    200px   /* title */
+    1fr     /* main bar */
+    auto    /* time label */
+    auto;   /* percentage */
+}
+
+details summary div.bar-label      { grid-column: 2; }
+details summary div.bar            { grid-column: 3; }
+details summary div.time-label     { grid-column: 4; }
+details summary div.bar-percentage { grid-column: 5; }
+
+details summary::-webkit-details-marker {
+  display: none;
+}
+
+details[open] summary::before {
+  content: "▾";
+  margin-right: 8px;
+}
+
+details:not([open]) summary::before {
+  content: "▸";
+  margin-right: 8px;
+}
+
+/* main bar label and bar */
+.bar-label {
+  width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar {
+  height: 20px;
+  background-color: orange;
+}
+
+/* time and percentage in summary */
+.time-label {
+  min-width: 80px;
+  text-align: right;
+}
+
+.sub-title a {
+  color: inherit;
+}
+
+.bar-percentage {
+  min-width: 50px;
+  text-align: right;
+  color: #aaa;
+}
+
+/* sub-rows (4 columns: bar track, title, time, % ) */
+.bar-container {
+  grid-template-columns:
+    200px  /* grey track */
+    1fr    /* pageTitle */
+    auto   /* time label */
+    auto;  /* percentage */
+}
+
+/* grey track + orange fill via pseudo */
+.sub-bar {
+  grid-column: 1;
+  position: relative;
+  height: 12px;
+  background-color: #555;
+  overflow: hidden;
+}
+
+.sub-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: var(--fill-width, 0%);
+  background-color: orange;
+}
+
+.sub-title {
+  grid-column: 2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #ccc;
+}
+
+.bar-container .time-label     { grid-column: 3; }
+.bar-container .bar-percentage { grid-column: 4; }
+
+
     </style>
 </head>
 <body>
@@ -83,7 +136,7 @@
                 <option value="16h">Last 16 hours</option>
             </optgroup>
             <optgroup label="Days">
-                <option value="1d" selected="selected">Last 1 day</option>
+                <option value="1d">Last 1 day</option>
                 <option value="2d">Last 2 days</option>
                 <option value="3d">Last 3 days</option>
                 <option value="4d">Last 4 days</option>
@@ -113,220 +166,139 @@
                 <option value="1y">Last 1 year</option>
             </optgroup>
             <optgroup label="All Time">
-                <option value="all">Since Beginning</option>
+                <option value="all" selected>Since Beginning</option>
             </optgroup>
         </select>
         <span class="total-time" id="total-time"></span>
-
     </div>
     <div id="report-container"></div>
     <h2>Raw Logfile</h2>
     <table id="raw-log">
-        <tr>
-            <th>Time</th>
-            <th>Title</th>
-            <th>URL/Page</th>
-            <th>Idle Time (s)</th>
-        </tr>
+        <tr><th>Time</th><th>Title</th><th>URL/Page</th><th>Idle Time (s)</th></tr>
     </table>
-
     <script>
         let activityData = [];
-
-        // Function to read the JSONL file
         async function loadActivityData() {
-            try {
-                const response = await fetch('activity_log.jsonl');
-                const textData = await response.text();
-                const lines = textData.trim().split('\n');
-
-                activityData = lines.map(line => {
-                    try {
-                        return JSON.parse(line);
-                    } catch (error) {
-                        return null; // or use undefined, depending on your needs
-                    }
-                }).filter(item => item !== null); // This removes the null entries
-
-                populateRawLog(activityData);
-                generateReport();
-            } catch (error) {
-                console.error('Error loading activity data:', error);
-            }
+            const res = await fetch('activity_log.jsonl');
+            const text = await res.text();
+            activityData = text.trim().split('\n')
+                .map(l=>{try{return JSON.parse(l)}catch{return null}})
+                .filter(e=>e);
+            populateRawLog(activityData);
+            generateReport();
         }
-
-        // Function to populate the raw log section
         function populateRawLog(data) {
-            const rawLogElement = document.getElementById('raw-log');
-            data.slice(-1000).reverse().forEach(entry => {
-                const row = rawLogElement.insertRow(-1);
-                const timeCell = row.insertCell(0);
-                const titleCell = row.insertCell(1);
-                const urlCell = row.insertCell(2);
-                const idleCell = row.insertCell(3);
-
-                // Format the timestamp
-                const date = new Date(entry.timestamp * 1000);
-                timeCell.textContent = date.toISOString().slice(0, 19).replace('T', ' ');
-
-                // Set the title
-                titleCell.textContent = entry.title;
-
-                // Create a link if URL is not null
-                if (entry.url) {
-                    const link = document.createElement('a');
-                    link.href = entry.url;
-                    link.textContent = entry.pageTitle || entry.url;
-                    urlCell.appendChild(link);
-                } else {
-                    urlCell.textContent = '-';
-                }
-
-                // Set the idle time
-                idleCell.textContent = entry.idleTime;
+            const tbl = document.getElementById('raw-log');
+            data.slice(-1000).reverse().forEach(e=>{
+                const r=tbl.insertRow();
+                r.insertCell().textContent=new Date(e.timestamp*1000).toISOString().slice(0,19).replace('T',' ');
+                r.insertCell().textContent=e.title;
+                const u=r.insertCell();
+                if(e.url){
+                    const a=document.createElement('a');
+                    a.href=e.url;
+                    a.textContent=e.pageTitle||e.url;
+                    u.appendChild(a);
+                } else u.textContent='-';
+                r.insertCell().textContent=e.idleTime;
             });
         }
-
-        // Function to generate the report
-        function generateReport() {
-            const reportContainer = document.getElementById('report-container');
-            const totalTimeElement = document.getElementById('total-time');
-
-            reportContainer.innerHTML = '';
-            totalTimeElement.textContent = '';
-
-            // Get the selected time frame
-            const timeFrameSelect = document.getElementById('time-frame');
-            const timeFrameValue = timeFrameSelect.value;
-
-            // Calculate the start time based on the selected time frame
-            let startTime = null; // default is null for 'since beginning'
-            if (timeFrameValue !== 'all') {
-                const now = Date.now();
-                const timeValue = parseInt(timeFrameValue.slice(0, -1));
-                const timeUnit = timeFrameValue.slice(-1);
-                let millisecondsAgo = 0;
-
-                switch (timeUnit) {
-                    case 'h': // hours
-                        millisecondsAgo = timeValue * 60 * 60 * 1000;
-                        break;
-                    case 'd': // days
-                        millisecondsAgo = timeValue * 24 * 60 * 60 * 1000;
-                        break;
-                    case 'w': // weeks
-                        millisecondsAgo = timeValue * 7 * 24 * 60 * 60 * 1000;
-                        break;
-                    case 'm': // months (approximate)
-                        millisecondsAgo = timeValue * 30 * 24 * 60 * 60 * 1000;
-                        break;
-                    case 'y': // years (approximate)
-                        millisecondsAgo = timeValue * 365 * 24 * 60 * 60 * 1000;
-                        break;
-                    default:
-                        millisecondsAgo = 0;
-                }
-
-                startTime = now - millisecondsAgo;
+        function generateReport(){
+            const rc=document.getElementById('report-container');
+            rc.innerHTML=''; document.getElementById('total-time').textContent='';
+            const tf=document.getElementById('time-frame').value;
+            let start=null;
+            if(tf!=='all'){
+                const v=parseInt(tf), u=tf.slice(-1);
+                let ms=0;
+                if(u==='h') ms=v*3600e3;
+                if(u==='d') ms=v*86400e3;
+                if(u==='w') ms=v*7*86400e3;
+                start=Date.now()-ms;
             }
-
-            // Filter the data based on the time frame and idleTime
-            const filteredData = activityData.filter(entry => {
-                const idleTime = parseFloat(entry.idleTime);
-                if (idleTime > 120) {
-                    return false;
-                }
-
-                // Parse the timestamp (assuming it's in Unix time seconds)
-                const entryTimestamp = entry.timestamp * 1000; // Convert to milliseconds
-                const entryDate = new Date(entryTimestamp);
-
-                if (startTime !== null && entryDate.getTime() < startTime) {
-                    return false;
-                }
-
-                return true;
+            const fd=activityData.filter(e=>{
+                if(e.idleTime>120) return false;
+                const t=e.timestamp*1000;
+                return !start||t>=start;
             });
-
-            // Calculate total active time
-            let totalMinutes = filteredData.length;
-
-            // Convert total seconds to hours and minutes
-            const hours = Math.floor(totalMinutes / 60);
-            const minutes = totalMinutes % 60;
-
-            let totalTimeString = '';
-            if (hours > 0) totalTimeString += `${hours}h `;
-            totalTimeString += `${minutes}m`;
-
-            totalTimeElement.textContent = totalTimeString;
-
-            // Aggregate data
-            const titleCounts = {};
-            filteredData.forEach(entry => {
-                const title = entry.title || 'UNKNOWN';
-                titleCounts[title] = (titleCounts[title] || 0) + 1;
+            const totM=fd.length;
+            const H=Math.floor(totM/60), M=totM%60;
+            document.getElementById('total-time').textContent=(H?H+'h ':'')+M+'m';
+            const counts={}, pages={};
+            fd.forEach(e=>{
+                const t=e.title||(e.title='UNKNOWN');
+                counts[t]=(counts[t]||0)+1;
             });
-
-            // Find the maximum count for scaling
-            const counts = Object.values(titleCounts);
-            const maxCount = Math.max(...counts);
-            const totalEntries = counts.reduce((a, b) => a + b, 0);
-
-            // Generate bars
-            Object.entries(titleCounts)
-                .sort((a, b) => b[1] - a[1])
-                .forEach(([title, count]) => {
-                    const widthPercent = (count / maxCount) * 70; // 70% of container width
-                    const color = 'orange'; // Default color
-                    const totalMinutes = count;
-                    const hours = Math.floor(totalMinutes / 60);
-                    const minutes = totalMinutes % 60;
-                    let timeStr = '';
-                    if (hours > 0 && minutes > 0) {
-                        timeStr = `${hours}h ${minutes}m`;
-                    } else if (hours > 0) {
-                        timeStr = `${hours} hours`;
-                    } else {
-                        timeStr = `${minutes} minutes`;
-                    }
-                    const percentage = (count / totalEntries) * 100;
-                    const percentageStr = `${percentage.toFixed(1)}%`;
-
-                    // Create bar elements
-                    const barContainer = document.createElement('div');
-                    barContainer.className = 'bar-container';
-
-                    const barLabel = document.createElement('div');
-                    barLabel.className = 'bar-label';
-                    barLabel.textContent = title;
-
-                    const bar = document.createElement('div');
-                    bar.className = 'bar';
-                    bar.style.backgroundColor = color;
-                    bar.style.width = `${widthPercent}%`;
-
-                    const timeLabel = document.createElement('div');
-                    timeLabel.className = 'time-label';
-                    timeLabel.textContent = timeStr;
-
-                    const barPercentage = document.createElement('div');
-                    barPercentage.className = 'bar-percentage';
-                    barPercentage.textContent = percentageStr;
-
-                    barContainer.appendChild(barLabel);
-                    barContainer.appendChild(bar);
-                    barContainer.appendChild(timeLabel);
-                    barContainer.appendChild(barPercentage);
-
-                    reportContainer.appendChild(barContainer);
+            const maxCount=Math.max(...Object.values(counts));
+            const totalEntries=Object.values(counts).reduce((a,b)=>a+b,0);
+            Object.entries(counts).sort((a,b)=>b[1]-a[1])
+            .forEach(([title,count])=>{
+                const h=Math.floor(count/60), m=count%60;
+                const timeStr=h?(m?`${h}h ${m}m`:`${h}h`):`${m}m`;
+                const pct=((count/totalEntries)*70).toFixed(1)+'%';
+                const wp=(count/maxCount)*70+'%';
+                const d=document.createElement('details');
+                const s=document.createElement('summary');
+                ['bar-label','bar','time-label','bar-percentage'].forEach(cls=>{
+                    const div=document.createElement('div');
+                    div.className=cls;
+                    if(cls==='bar-label') div.textContent=title;
+                    if(cls==='bar') { div.style.width=wp; }
+                    if(cls==='time-label') div.textContent=timeStr;
+                    if(cls==='bar-percentage') div.textContent=pct;
+                    s.appendChild(div);
                 });
-        }
+                d.appendChild(s);
+                const pageCounts={}, pageURLs={};
+                fd
+                    .filter(e => e.title === title && e.pageTitle)
+                    .forEach(e => {
+                        pageCounts[e.pageTitle] = (pageCounts[e.pageTitle]||0) + 1;
+                        pageURLs[e.pageTitle] = e.url;               // grab URL for that pageTitle
+                    });
 
-        // Initialize the page
-        window.onload = () => {
-            loadActivityData();
-        };
+                const maxPageCount = Math.max(...Object.values(pageCounts), 1);
+
+                Object.entries(pageCounts).sort((a,b)=>b[1]-a[1])
+                    .forEach(([pt, c]) => {
+                        const hh = Math.floor(c/60), mm = c%60;
+                        const ts = hh ? (mm ? `${hh}h ${mm}m` : `${hh}h`) : `${mm}m`;
+                        const pct2 = ((c/totalEntries)*70).toFixed(1) + '%';
+
+                        const row = document.createElement('div');
+                        row.className = 'bar-container';
+
+                        const sb = document.createElement('div');
+                        sb.className = 'sub-bar';
+                        sb.style.setProperty(
+                          '--fill-width',
+                          ((c/maxPageCount)*100).toFixed(1) + '%'
+                        );
+
+                        const st = document.createElement('div');
+                        st.className = 'sub-title';
+                        const a = document.createElement('a');
+                        a.href = pageURLs[pt];
+                        a.textContent = pt;
+                        a.target = '_blank';
+                        st.appendChild(a);
+
+                        const tl = document.createElement('div');
+                        tl.className = 'time-label';
+                        tl.textContent = ts;
+
+                        const bp = document.createElement('div');
+                        bp.className = 'bar-percentage';
+                        bp.textContent = pct2;
+
+                        [sb, st, tl, bp].forEach(el => row.appendChild(el));
+                        d.appendChild(row);
+                    });
+
+                rc.appendChild(d);
+            });
+        }
+        window.onload=loadActivityData;
     </script>
 </body>
 </html>
