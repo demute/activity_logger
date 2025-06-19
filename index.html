@@ -11,9 +11,21 @@ body {
   font-family: Arial, sans-serif;
 }
 
-.controls {
-  margin-bottom: 20px;
-}
+    .controls {
+        /* reuse same columns as summary */
+        display: grid;
+        grid-template-columns:
+            auto    /* arrow col, unused here */
+        200px   /* title col: label+select */
+        1fr     /* bar col: empty */
+        auto    /* cost col */
+        auto    /* time col */
+        auto;   /* % col */
+    grid-column-gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+    }
+
 
 /* main summary and sub-rows share a grid gutter */
 details summary,
@@ -41,11 +53,15 @@ details summary .cost-label      { grid-column: 4; }
 details summary .time-label      { grid-column: 5; }
 details summary .bar-percentage  { grid-column: 6; }
 
+.cost-label {
+  color: #fb1;
+}
+
 details summary .cost-label {
   grid-column: 4;
   min-width: 60px;
   text-align: right;
-  color: #fd1;
+  color: #ca4;
   padding-right: 10px;
 }
 
@@ -111,7 +127,7 @@ details:not([open]) summary::before {
   grid-column: 4;
   min-width: 60px;
   text-align: right;
-  color: #0f0;
+  color: #661;
   padding-right: 10px;
 }
 
@@ -195,7 +211,10 @@ details:not([open]) summary::before {
                 <option value="all" selected>Since Beginning</option>
             </optgroup>
         </select>
-        <span class="total-time" id="total-time"></span>
+        <span id="total-bar"></span>
+        <span class="cost-label" id="total-cost"></span>
+        <span class="time-label" id="total-time"></span>
+        <span class="bar-percentage" id="total-percentage">100.0%</span>
     </div>
     <div id="report-container"></div>
     <h2>Raw Logfile</h2>
@@ -243,6 +262,8 @@ details:not([open]) summary::before {
                 if(u==='h') ms=v*3600e3;
                 if(u==='d') ms=v*86400e3;
                 if(u==='w') ms=v*7*86400e3;
+                if(u==='m') ms=v*30*86400e3;
+                if(u==='y') ms=v*365*86400e3;
                 start=Date.now()-ms;
             }
             const fd=activityData.filter(e=>{
@@ -260,6 +281,7 @@ details:not([open]) summary::before {
             });
             const maxCount=Math.max(...Object.values(counts));
             const totalEntries=Object.values(counts).reduce((a,b)=>a+b,0);
+            document.getElementById('total-cost').textContent = '';
             Object.entries(counts).sort((a,b)=>b[1]-a[1])
             .forEach(([title,count])=>{
                 const h=Math.floor(count/60), m=count%60;
@@ -319,6 +341,7 @@ details:not([open]) summary::before {
                         ((newCount / totalEntries) * 70).toFixed(1) + '%';
                     const newCost = (newCount * factor).toFixed(2);
                     summaryCostLabel.textContent = (+newCost > 0 ? `$${newCost}` : '');
+                    updateTotalCost();
 
                 }
 
@@ -386,8 +409,20 @@ details:not([open]) summary::before {
 
                 rc.appendChild(d);
             });
+            updateTotalCost ();
+        }
+        // new: sum all visible summary costs
+        function updateTotalCost(){
+          let sum = 0;
+          document.querySelectorAll('summary .cost-label').forEach(div=>{
+            const txt = div.textContent.replace('$','');
+            if(txt) sum += parseFloat(txt);
+          });
+          const tc = document.getElementById('total-cost');
+          tc.textContent = sum>0 ? `$${sum.toFixed(2)}` : '';
         }
         window.onload=loadActivityData;
+
     </script>
 </body>
 </html>
