@@ -85,11 +85,16 @@ details:not([open]) summary::before {
 
 /* sub-rows (4 columns: bar track, title, time, % ) */
 .bar-container {
+  display: grid;
   grid-template-columns:
-    200px  /* grey track */
-    1fr    /* pageTitle */
-    auto   /* time label */
-    auto;  /* percentage */
+    auto    /* checkbox */
+    200px   /* grey track */
+    1fr     /* pageTitle */
+    auto    /* time label */
+    auto;   /* percentage */
+  grid-column-gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
 /* grey track + orange fill via pseudo */
@@ -117,8 +122,10 @@ details:not([open]) summary::before {
   color: #ccc;
 }
 
-.bar-container .time-label     { grid-column: 3; }
-.bar-container .bar-percentage { grid-column: 4; }
+.bar-container .sub-bar      { grid-column: 2; }
+.bar-container .sub-title    { grid-column: 3; }
+.bar-container .time-label   { grid-column: 4; }
+.bar-container .bar-percentage { grid-column: 5; }
 
 
     </style>
@@ -259,22 +266,50 @@ details:not([open]) summary::before {
 
                 const maxPageCount = Math.max(...Object.values(pageCounts), 1);
 
+                const summaryBar = s.querySelector('.bar');
+                const summaryTimeLabel = s.querySelector('.time-label');
+                const summaryPercentageLabel = s.querySelector('.bar-percentage');
+
+                // 2) map of pageTitle→checkbox
+                const checkboxMap = {};
+
+                // 3) updateSummary(): recompute and repaint the main summary
+                function updateSummary() {
+                    const newCount = Object.entries(pageCounts)
+                        .reduce((sum, [pt, c]) => checkboxMap[pt].checked ? sum + c : sum, 0);
+                    // time string
+                    const hh = Math.floor(newCount/60), mm = newCount % 60;
+                    summaryTimeLabel.textContent = hh
+                        ? (mm ? `${hh}h ${mm}m` : `${hh}h`)
+                        : `${mm}m`;
+                    // bar width (relative to original maxCount)
+                    summaryBar.style.width = (newCount / maxCount * 70) + '%';
+                    // percentage label (relative to totalEntries)
+                    summaryPercentageLabel.textContent =
+                        ((newCount / totalEntries) * 70).toFixed(1) + '%';
+                }
+
+                // 4) build each sub-row with a checkbox
                 Object.entries(pageCounts).sort((a,b)=>b[1]-a[1])
                     .forEach(([pt, c]) => {
-                        const hh = Math.floor(c/60), mm = c%60;
-                        const ts = hh ? (mm ? `${hh}h ${mm}m` : `${hh}h`) : `${mm}m`;
-                        const pct2 = ((c/totalEntries)*70).toFixed(1) + '%';
-
                         const row = document.createElement('div');
                         row.className = 'bar-container';
 
+                        // checkbox
+                        const cb = document.createElement('input');
+                        cb.type = 'checkbox';
+                        cb.checked = true;
+                        cb.addEventListener('change', updateSummary);
+                        checkboxMap[pt] = cb;
+                        row.appendChild(cb);
+
+                        // grey track + fill
                         const sb = document.createElement('div');
                         sb.className = 'sub-bar';
-                        sb.style.setProperty(
-                          '--fill-width',
-                          ((c/maxPageCount)*100).toFixed(1) + '%'
-                        );
+                        sb.style.setProperty('--fill-width', ((c/maxPageCount)*100).toFixed(1) + '%');
+                        row.appendChild(sb);
 
+                        // title link
                         const st = document.createElement('div');
                         st.className = 'sub-title';
                         const a = document.createElement('a');
@@ -282,16 +317,21 @@ details:not([open]) summary::before {
                         a.textContent = pt;
                         a.target = '_blank';
                         st.appendChild(a);
+                        row.appendChild(st);
 
+                        // time label
                         const tl = document.createElement('div');
                         tl.className = 'time-label';
-                        tl.textContent = ts;
+                        const hh2 = Math.floor(c/60), mm2 = c % 60;
+                        tl.textContent = hh2 ? (mm2 ? `${hh2}h ${mm2}m` : `${hh2}h`) : `${mm2}m`;
+                        row.appendChild(tl);
 
+                        // percentage
                         const bp = document.createElement('div');
                         bp.className = 'bar-percentage';
-                        bp.textContent = pct2;
+                        bp.textContent = ((c/totalEntries)*70).toFixed(1) + '%';
+                        row.appendChild(bp);
 
-                        [sb, st, tl, bp].forEach(el => row.appendChild(el));
                         d.appendChild(row);
                     });
 
