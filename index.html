@@ -300,7 +300,7 @@ details:not([open]) summary::before {
                     div.className = cls;
                     if (cls==='bar-label')      div.textContent = title;
                     if (cls==='bar')            div.style.width = wp;
-                    if (cls==='cost-label')     div.textContent = (+cost > 0 ? `$${cost}` : '');
+                    if (cls==='cost-label')     div.textContent = (+cost > 0 ? `${cost} kr` : '');
                     if (cls==='time-label')     div.textContent = timeStr;
                     if (cls==='bar-percentage') div.textContent = pct;
                     s.appendChild(div);
@@ -340,7 +340,7 @@ details:not([open]) summary::before {
                     summaryPercentageLabel.textContent =
                         ((newCount / totalEntries) * 70).toFixed(1) + '%';
                     const newCost = (newCount * factor).toFixed(2);
-                    summaryCostLabel.textContent = (+newCost > 0 ? `$${newCost}` : '');
+                    summaryCostLabel.textContent = (+newCost > 0 ? `${newCost} kr` : '');
                     updateTotalCost();
 
                 }
@@ -379,7 +379,7 @@ details:not([open]) summary::before {
 
                         const sc = document.createElement('div');
                         sc.className = 'cost-label';
-                        sc.textContent = (+subCost > 0 ? `$${subCost}` : '');
+                        sc.textContent = (+subCost > 0 ? `${subCost} kr` : '');
 
                         row.appendChild(sc);
 
@@ -387,7 +387,7 @@ details:not([open]) summary::before {
                         cb.addEventListener('change', () => {
                           updateSummary();
                             sc.textContent = cb.checked
-                                ? (c * factor > 0 ? `$${(c * factor).toFixed(2)}` : '')
+                                ? (c * factor > 0 ? `${(c * factor).toFixed(2)} kr` : '')
                                 : '';
                         });
 
@@ -419,7 +419,7 @@ details:not([open]) summary::before {
             if(txt) sum += parseFloat(txt);
           });
           const tc = document.getElementById('total-cost');
-          tc.textContent = sum>0 ? `$${sum.toFixed(2)}` : '';
+          tc.textContent = sum>0 ? `${sum.toFixed(2)} kr` : '';
         }
         window.onload=loadActivityData;
 
