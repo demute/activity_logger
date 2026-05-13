@@ -14,3 +14,4 @@
 .DS_Store
 *-backups
 /activity_log.jsonl
+/current_quotas.json
