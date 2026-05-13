@@ -8,14 +8,18 @@ use FindBin;
 my $maxTimeMins = 60*24*7;
 my $maxIdleTime = 120;
 
+my $minsPerHour = 60;
+my $minsPerDay  = 24 * 60;
 my %dict =
 (
-    "discord" => {"hist" => [], "maxQuota" =>  45, "refill" => 45/(3*60),     "patterns" => ["discord"]},
-    "gaming"  => {"hist" => [], "maxQuota" => 120, "refill" => 120/(2*24*60), "patterns" => ["roblox","minecraft"]},
-    "youtube" => {"hist" => [], "maxQuota" =>  60, "refill" => 60/(6*60),     "patterns" => ["youtube"]},
+    "discord" => {"hist" => [], "maxQuota" =>  45, "refillTime" => 3 * $minsPerHour, "patterns" => ["discord"]},
+    "gaming"  => {"hist" => [], "maxQuota" => 120, "refillTime" => 2 * $minsPerDay,  "patterns" => ["roblox","minecraft"]},
+    "youtube" => {"hist" => [], "maxQuota" =>  60, "refillTime" => 6 * $minsPerHour, "patterns" => ["youtube"]},
 );
 
-my $file  = "$FindBin::Bin/activity_log.jsonl";
+my $file      = $ARGV[0] // "$FindBin::Bin/activity_log.jsonl";
+my $json_file = $ARGV[1] // "$FindBin::Bin/current_quotas.json";
+my $txt_file  = $ARGV[2] // "$FindBin::Bin/current_quotas.txt";
 
 open my $fh, '<', $file or die $!;
 
@@ -55,13 +59,15 @@ for(@logEntries)
     }
 }
 
+my $output = {};
 for my $account (sort keys %dict) {
-    my $obj      = $dict{$account};
-    my $hist     = $obj->{hist};
-    my $refill   = $obj->{refill};
-    my $maxQuota = $obj->{maxQuota};
+    my $obj        = $dict{$account};
+    my $hist       = $obj->{hist};
+    my $maxQuota   = $obj->{maxQuota};
+    my $refillTime = $obj->{refillTime};
+    my $refillRate = $maxQuota / $refillTime;
 
-    my $quota    = $maxQuota;
+    my $quota = $maxQuota;
 
     for my $elapsed (reverse 0..$maxTimeMins) {
         my $usage = $hist->[$elapsed];
@@ -72,19 +78,23 @@ for my $account (sort keys %dict) {
             #print "decrement account $account by $usage => state: $quota\n";
         }
         else {
-            $quota += $refill;
+            $quota += $refillRate;
             $quota = $maxQuota if ($quota) > $maxQuota;
             $quota = int (($quota * 10000) + 0.5) / 10000;
             #print "increment account $account by $obj->{refill} => state: $quota\n";
         }
     }
 
-    $obj->{quota} = $quota;
+
+    $output->{$account} = {quota => $quota, refillTime => $refillTime, maxQuota => $maxQuota};
 }
 
-my $output = {};
-for my $account (sort keys %dict) {
-    my $quota = $dict{$account}->{quota};
-    $output->{$account} = $quota;
+open my $json_fh, '>', $json_file or die $!;
+print $json_fh to_json($output), "\n";
+close $json_fh;
+
+open my $txt_fh, '>', $txt_file or die $!;
+for my $key (sort keys %$output) {
+    print $txt_fh "$key ", $output->{$key}->{quota}, "\n";
 }
-print to_json ($output), "\n";
+close $txt_fh;

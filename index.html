@@ -168,7 +168,7 @@ details:not([open]) summary::before {
 
 .quota-row {
   display: grid;
-  grid-template-columns: 200px 1fr auto;
+  grid-template-columns: 227px minmax(300px, 1fr) 200px;
   grid-column-gap: 10px;
   align-items: center;
   margin-bottom: 10px;
@@ -263,11 +263,36 @@ details:not([open]) summary::before {
                 return;
             }
 
-            const maxQuota = 120;
+            function formatMinutes(totalMinutes) {
+                totalMinutes = Math.max(0, Math.ceil(totalMinutes));
+
+                const days = Math.floor(totalMinutes / 1440);
+                totalMinutes %= 1440;
+
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+
+                const parts = [];
+                if (days) parts.push(days + 'd');
+                if (hours) parts.push(hours + 'h');
+                if (minutes || parts.length === 0) parts.push(minutes + 'm');
+
+                return parts.join(' ');
+            }
 
             Object.keys(quotas).sort().forEach(name => {
-                const value = Number(quotas[name]);
+                const q = quotas[name];
+
+                const value = Number(q.quota);
+                const maxQuota = Number(q.maxQuota);
+                const refillTime = Number(q.refillTime);
+
                 const pct = Math.max(0, Math.min(100, value / maxQuota * 100));
+
+                const refillRate = maxQuota / refillTime;
+                const minutesUntilRefilled = refillRate > 0
+                    ? (maxQuota - value) / refillRate
+                    : 0;
 
                 const row = document.createElement('div');
                 row.className = 'quota-row';
@@ -286,7 +311,11 @@ details:not([open]) summary::before {
 
                 const val = document.createElement('div');
                 val.className = 'quota-value';
-                val.textContent = value.toFixed(2).replace(/\.00$/, '') + ' min';
+                val.textContent =
+                    value.toFixed(2).replace(/\.00$/, '') +
+                    ' min / ' +
+                    formatMinutes(minutesUntilRefilled) +
+                    ' until refilled';
 
                 row.appendChild(label);
                 row.appendChild(track);

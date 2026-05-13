@@ -1,12 +1,11 @@
 #!/bin/bash
 set -euo pipefail
-set -x
 
 LOGIN_USER=$(stat -f '%Su' /dev/console)
 
 THRESHOLD=1
 ANCHOR="/etc/pf.anchors/timelimit"
-QUOTAS="/Users/$LOGIN_USER/.activity_logger/current_quotas.json"
+QUOTAS="/Users/$LOGIN_USER/.activity_logger/current_quotas.txt"
 TMP="$(mktemp)"
 
 trap 'rm -f "$TMP"' EXIT
@@ -38,7 +37,6 @@ fail_closed() {
 }
 
 [ -r "$QUOTAS" ] || fail_closed
-jq empty "$QUOTAS" >/dev/null 2>&1 || fail_closed
 
 blocked_domains=""
 
@@ -61,7 +59,7 @@ add_domains() {
             gaming)  add_domains "$gaming_domains" ;;
             *) continue ;;
         esac
-    done < <(jq -r 'to_entries | sort_by(.key)[] | "\(.key) \(.value)"' "$QUOTAS")
+    done < "$QUOTAS"
 } || fail_closed
 
 if [ -z "$blocked_domains" ]; then
