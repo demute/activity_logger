@@ -10,9 +10,9 @@ my $maxIdleTime = 120;
 
 my %dict =
 (
-    "discord" => {"hist" => [], "maxQuota" => 120, "refill" => 0.05, "patterns" => ["discord"]},
-    "gaming"  => {"hist" => [], "maxQuota" => 120, "refill" => 0.05, "patterns" => ["roblox","minecraft"]},
-    "youtube" => {"hist" => [], "maxQuota" => 120, "refill" => 0.05, "patterns" => ["youtube"]},
+    "discord" => {"hist" => [], "maxQuota" =>  45, "refill" => 45/(3*60),     "patterns" => ["discord"]},
+    "gaming"  => {"hist" => [], "maxQuota" => 120, "refill" => 120/(2*24*60), "patterns" => ["roblox","minecraft"]},
+    "youtube" => {"hist" => [], "maxQuota" =>  60, "refill" => 60/(6*60),     "patterns" => ["youtube"]},
 );
 
 my $file  = "$FindBin::Bin/activity_log.jsonl";
