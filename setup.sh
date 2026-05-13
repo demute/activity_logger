@@ -73,14 +73,22 @@ cat << EOF > "$UPDATE_PLIST_FILE"
 </plist>
 EOF
 
-# Load the HTTP server service
-echo launchctl load -w "$HTTP_PLIST_FILE"
-launchctl load -w "$HTTP_PLIST_FILE"
+UID_NUM=$(id -u)
+
+# Remove old versions if already loaded
+launchctl bootout "gui/$UID_NUM" "$HTTP_PLIST_FILE" 2>/dev/null || true
+launchctl bootout "gui/$UID_NUM" "$UPDATE_PLIST_FILE" 2>/dev/null || true
+
+# Load HTTP server
+launchctl bootstrap "gui/$UID_NUM" "$HTTP_PLIST_FILE"
+launchctl enable "gui/$UID_NUM/com.user.httpserver"
+
 echo "HTTP server setup completed. The server will start automatically on boot."
 
-# Load the update report service
-echo launchctl load -w "$UPDATE_PLIST_FILE"
-launchctl load -w "$UPDATE_PLIST_FILE"
+# Load update report service
+launchctl bootstrap "gui/$UID_NUM" "$UPDATE_PLIST_FILE"
+launchctl enable "gui/$UID_NUM/com.user.updatereport"
+
 echo "Update report setup completed. The script will run once every minute."
 
 echo "Your OS will probably ask you about some permissions and in order for this to work you have to grant them."
