@@ -166,10 +166,35 @@ details:not([open]) summary::before {
 .bar-container .time-label   { grid-column: 5; }
 .bar-container .bar-percentage { grid-column: 6; }
 
+.quota-row {
+  display: grid;
+  grid-template-columns: 200px 1fr auto;
+  grid-column-gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.quota-track {
+  height: 20px;
+  background-color: #333;
+}
+
+.quota-bar {
+  height: 20px;
+  background-color: orange;
+}
+
+.quota-value {
+  min-width: 80px;
+  text-align: right;
+}
 
     </style>
 </head>
 <body>
+    <h2>Quotas</h2>
+    <div id="quota-container"></div>
+
     <h2>Activity Report</h2>
     <div class="controls">
         <label for="time-frame">Time Frame:</label>
@@ -179,7 +204,7 @@ details:not([open]) summary::before {
                 <option value="2h">Last 2 hours</option>
                 <option value="4h">Last 4 hours</option>
                 <option value="8h">Last 8 hours</option>
-                <option value="16h">Last 16 hours</option>
+                <option value="16h" selected>Last 16 hours</option>
             </optgroup>
             <optgroup label="Days">
                 <option value="1d">Last 1 day</option>
@@ -212,7 +237,7 @@ details:not([open]) summary::before {
                 <option value="1y">Last 1 year</option>
             </optgroup>
             <optgroup label="All Time">
-                <option value="all" selected>Since Beginning</option>
+                <option value="all">Last 16 day</option>
             </optgroup>
         </select>
         <span id="total-bar"></span>
@@ -226,11 +251,57 @@ details:not([open]) summary::before {
         <tr><th>Time</th><th>Title</th><th>URL/Page</th><th>Idle Time (s)</th></tr>
     </table>
     <script>
+        async function loadQuotas() {
+            const qc = document.getElementById('quota-container');
+            qc.innerHTML = '';
+
+            let quotas = {};
+            try {
+                const res = await fetch('current_quotas.json?ts=' + Date.now());
+                quotas = await res.json();
+            } catch {
+                return;
+            }
+
+            const maxQuota = 120;
+
+            Object.keys(quotas).sort().forEach(name => {
+                const value = Number(quotas[name]);
+                const pct = Math.max(0, Math.min(100, value / maxQuota * 100));
+
+                const row = document.createElement('div');
+                row.className = 'quota-row';
+
+                const label = document.createElement('div');
+                label.textContent = name;
+
+                const track = document.createElement('div');
+                track.className = 'quota-track';
+
+                const bar = document.createElement('div');
+                bar.className = 'quota-bar';
+                bar.style.width = pct + '%';
+
+                track.appendChild(bar);
+
+                const val = document.createElement('div');
+                val.className = 'quota-value';
+                val.textContent = value.toFixed(2).replace(/\.00$/, '') + ' min';
+
+                row.appendChild(label);
+                row.appendChild(track);
+                row.appendChild(val);
+
+                qc.appendChild(row);
+            });
+        }
+
         const costPerMinute = {
             "www.youtube.com": 0.1,
             "java": 0.2,
             "RobloxPlayer": 0.25,
         };
+
         let activityData = [];
         async function loadActivityData() {
             const res = await fetch('activity_log.jsonl');
@@ -245,7 +316,16 @@ details:not([open]) summary::before {
             const tbl = document.getElementById('raw-log');
             data.slice(-1000).reverse().forEach(e=>{
                 const r=tbl.insertRow();
-                r.insertCell().textContent=new Date(e.timestamp*1000).toISOString().slice(0,19).replace('T',' ');
+                r.insertCell().textContent = new Date(e.timestamp * 1000).toLocaleString('en-GB', {
+                    timeZone: 'Europe/Stockholm',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
                 r.insertCell().textContent=e.title;
                 const u=r.insertCell();
                 if(e.url){
@@ -427,7 +507,10 @@ details:not([open]) summary::before {
           const tc = document.getElementById('total-cost');
           tc.textContent = sum>0 ? `${sum.toFixed(2)} kr` : '';
         }
-        window.onload=loadActivityData;
+        window.onload = async () => {
+            await loadQuotas();
+            await loadActivityData();
+        };
 
     </script>
 </body>
