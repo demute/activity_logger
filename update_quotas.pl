@@ -14,7 +14,7 @@ my %dict =
 (
     "discord" => {"hist" => [], "maxQuota" =>  45, "refillTime" => 3 * $minsPerHour, "patterns" => ["discord"]},
     "gaming"  => {"hist" => [], "maxQuota" => 120, "refillTime" => 2 * $minsPerDay,  "patterns" => ["roblox","minecraft"]},
-    "youtube" => {"hist" => [], "maxQuota" =>  60, "refillTime" => 6 * $minsPerHour, "patterns" => ["youtube"]},
+    "youtube" => {"hist" => [], "maxQuota" =>  60, "refillTime" => 6 * $minsPerHour, "patterns" => ["youtube"], "exclusions" => ["tutorial"]},
 );
 
 my $file      = $ARGV[0] // "$FindBin::Bin/activity_log.jsonl";
@@ -34,7 +34,7 @@ close $fh;
 
 for(@logEntries)
 {
-    my $j = from_json ($_) || next;
+    my $j = eval { from_json($_) } // next;
     next if ($j->{idleTime} > $maxIdleTime);
 
     my $elapsed = int((time - $j->{timestamp})/60);
@@ -53,7 +53,16 @@ for(@logEntries)
         my @patterns = @{$obj->{patterns}};
         for my $pattern (@patterns) {
             if ($str =~ /$pattern/) {
-                $obj->{hist}->[$elapsed] += 1;
+                my $excluded = 0;
+
+                if ($obj->{exclusions}) {
+                    my @exclusions = @{$obj->{exclusions}};
+                    for my $exclusion (@exclusions) {
+                        $excluded = 1 if ($str =~ /$exclusion/);
+                    }
+                }
+
+                $obj->{hist}->[$elapsed] += 1 unless $excluded;
             }
         }
     }
