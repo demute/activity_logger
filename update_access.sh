@@ -65,7 +65,7 @@ add_domains() {
 if ! grep -q 'anchor "timelimit"' /etc/pf.conf; then
     echo 'anchor "timelimit"' >> /etc/pf.conf
     echo 'load anchor "timelimit" from "/etc/pf.anchors/timelimit"' >> /etc/pf.conf
-    sudo pfctl -f /etc/pf.conf
+    sudo /sbin/pfctl -f /etc/pf.conf
 fi
 
 if [ -z "$blocked_domains" ]; then
