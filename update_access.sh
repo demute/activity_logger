@@ -50,6 +50,20 @@ load_if_changed() {
     return 0
 }
 
+load_service_rules() {
+    local changed=1
+
+    if [ -r "$SERVICES_RULES" ] && cmp -s "$TMP_SERVICES" "$SERVICES_RULES"; then
+        changed=0
+    fi
+
+    /sbin/pfctl -a "$SERVICES_ANCHOR" -f "$TMP_SERVICES"
+    cp "$TMP_SERVICES" "$SERVICES_RULES"
+
+    if [ "$changed" -eq 1 ]; then
+        flush_states
+    fi
+}
 
 flush_states() {
     /sbin/pfctl -F states >/dev/null 2>&1 || true
@@ -106,13 +120,7 @@ block drop out quick proto udp to <blocked> port 443
 EOF
     fi
 
-    if load_if_changed \
-        "$SERVICES_ANCHOR" \
-        "$TMP_SERVICES" \
-        "$SERVICES_RULES"
-    then
-        flush_states
-    fi
+    load_service_rules
 }
 
 
