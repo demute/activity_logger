@@ -19,9 +19,9 @@ trap 'rm -rf "$TMPDIR"' EXIT
 TMP_SCHEDULE="$TMPDIR/schedule"
 TMP_SERVICES="$TMPDIR/services"
 
-youtube_domains="youtube.com, www.youtube.com, youtu.be"
+youtube_domains="youtube.com, www.youtube.com, youtu.be, pinimg.com, i.pinimg.com, s.pinimg.com, pinterest.com, www.pinterest.com, pinterest.se, www.pinterest.se, pin.it, pinterestmail.com"
 discord_domains="discord.com, discord.gg"
-gaming_domains="roblox.com, www.roblox.com"
+gaming_domains="roblox.com, www.roblox.com, minecraft.net, www.minecraft.net, mojang.com, ppy.sh, osu.ppy.sh, cho.ppy.sh, m1.ppy.sh"
 
 
 # Convert "21:30" to minutes since midnight.

@@ -12,9 +12,9 @@ my $minsPerHour = 60;
 my $minsPerDay  = 24 * 60;
 my %dict =
 (
-    "discord" => {"hist" => [], "maxQuota" =>  60, "refillTime" => 6 * $minsPerHour, "patterns" => ["discord"]},
-    "gaming"  => {"hist" => [], "maxQuota" => 120, "refillTime" => 2 * $minsPerDay,  "patterns" => ["roblox","minecraft"]},
-    "youtube" => {"hist" => [], "maxQuota" =>  60, "refillTime" => 1 * $minsPerDay,  "patterns" => ["youtube"], "exclusions" => ["tutorial"]},
+    "discord" => {"hist" => [], "maxQuota" =>  60, "refillTime" => 12 * $minsPerHour, "patterns" => ["discord"]},
+    "gaming"  => {"hist" => [], "maxQuota" => 120, "refillTime" =>  7 * $minsPerDay,  "patterns" => ["roblox","minecraft","osu"]},
+    "youtube" => {"hist" => [], "maxQuota" =>  45, "refillTime" =>  1 * $minsPerDay,  "patterns" => ["youtube", "pinterest"], "exclusions" => ["tutorial"]},
 );
 
 my $file      = $ARGV[0] // "$FindBin::Bin/activity_log.jsonl";
